@@ -2,9 +2,10 @@ import re
 from decimal import Decimal
 import sys
 import struct
+from binascii import unhexlify
 from rdbtools.parser import RdbCallback, RdbParser
 
-ESCAPE = re.compile(ur'[\x00-\x1f\\"\b\f\n\r\t\u2028\u2029]')
+ESCAPE = re.compile(r'[\x00-\x1f\\"\b\f\n\r\t\u2028\u2029]')
 ESCAPE_ASCII = re.compile(r'([\\"]|[^\ -~])')
 HAS_UTF8 = re.compile(r'[\x80-\xff]')
 ESCAPE_DCT = {
@@ -15,14 +16,14 @@ ESCAPE_DCT = {
     '\n': '\\n',
     '\r': '\\r',
     '\t': '\\t',
-    u'\u2028': '\\u2028',
-    u'\u2029': '\\u2029',
+    '\u2028': '\\u2028',
+    '\u2029': '\\u2029',
 }
 for i in range(0x20):
     ESCAPE_DCT.setdefault(chr(i), '\\u%04x' % (i,))
 
 def _floatconstants():
-    _BYTES = '7FF80000000000007FF0000000000000'.decode('hex')
+    _BYTES = unhexlify(b'7FF80000000000007FF0000000000000')
     # The struct module in Python 2.4 would get frexp() out of range here
     # when an endian is specified in the format string. Fixed in Python 2.5+
     if sys.byteorder != 'big':
@@ -35,10 +36,10 @@ NaN, PosInf, NegInf = _floatconstants()
 def _encode_basestring(s):
     """Return a JSON representation of a Python string"""
     if isinstance(s, str) and HAS_UTF8.search(s) is not None:
-        s = s.decode('utf-8')
+        s = s.decode('utf-8')   # FIXME
     def replace(match):
         return ESCAPE_DCT[match.group(0)]
-    return u'"' + ESCAPE.sub(replace, s) + u'"'
+    return '"' + ESCAPE.sub(replace, s) + '"'
 
 def _encode_basestring_ascii(s):
     """Return an ASCII-only JSON representation of a Python string
@@ -46,8 +47,8 @@ def _encode_basestring_ascii(s):
     """
     try :
         if isinstance(s, str) and HAS_UTF8.search(s) is not None:
-            s = s.decode('utf-8')
-    except:
+            s = s.decode('utf-8')   # FIXME
+    except: # FIXME
         pass
 
     def replace(match):
@@ -72,7 +73,7 @@ def _encode(s, quote_numbers = True):
         qn = '"'
     else:
         qn = ''
-    if isinstance(s, int) or isinstance(s, long):
+    if isinstance(s, int):
         return qn + str(s) + qn
     elif isinstance(s, float):
         if s != s:
